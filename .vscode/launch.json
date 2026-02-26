@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/j2html-preview-vscode",
+        "${workspaceFolder}/j2html-preview-annotation"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/j2html-preview-vscode/out/**/*.js"
+      ],
+      "preLaunchTask": "npm: compile - j2html-preview-vscode"
+    }
+  ]
+}

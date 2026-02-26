@@ -54,7 +54,8 @@ class PreviewCodeLensProvider implements vscode.CodeLensProvider {
         const lines = text.split('\n');
 
         const packageMatch = text.match(/^package\s+([\w.]+)\s*;/m);
-        const classMatch = text.match(/(?:public\s+)?(?:class|interface)\s+(\w+)/);
+        // Match class/interface declarations at the start of a line (not in comments)
+        const classMatch = text.match(/^(?:public\s+)?(?:class|interface)\s+(\w+)/m);
 
         if (!classMatch) {
             return lenses;
@@ -169,7 +170,9 @@ function findMavenRoot(filePath: string): string | null {
 function execMaven(cwd: string, args: string[]): Promise<string> {
     return new Promise((resolve, reject) => {
         const mvn = process.platform === 'win32' ? 'mvn.cmd' : 'mvn';
-        const proc = cp.spawn(mvn, args, { cwd, shell: false });
+        // On Windows, use shell: true to properly execute .cmd files
+        const useShell = process.platform === 'win32';
+        const proc = cp.spawn(mvn, args, { cwd, shell: useShell });
 
         let stdout = '';
         let stderr = '';
@@ -182,6 +185,10 @@ function execMaven(cwd: string, args: string[]): Promise<string> {
             } else {
                 reject(new Error(`Maven exited with code ${code}:\n${stderr}`));
             }
+        });
+
+        proc.on('error', (err) => {
+            reject(new Error(`Failed to spawn Maven process: ${err.message}`));
         });
     });
 }
@@ -221,10 +228,13 @@ function runJavaMethod(
     methodName: string,
 ): Promise<string> {
     return new Promise((resolve, reject) => {
+        // On Windows, use shell: true to handle long classpaths properly
+        const useShell = process.platform === 'win32';
+        
         const proc = cp.spawn(
             'java',
             ['-cp', classpath, 'com.teggr.j2html.preview.PreviewRunner', className, methodName],
-            { cwd, shell: false },
+            { cwd, shell: useShell },
         );
 
         let stdout = '';
@@ -238,6 +248,10 @@ function runJavaMethod(
             } else {
                 reject(new Error(`PreviewRunner failed (exit ${code}):\n${stderr}`));
             }
+        });
+        
+        proc.on('error', (err) => {
+            reject(new Error(`Failed to spawn Java process: ${err.message}`));
         });
     });
 }

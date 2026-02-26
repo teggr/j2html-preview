@@ -32,9 +32,11 @@ npm run compile
 
 ### 3. Launch the Extension Development Host
 
-Open the `j2html-preview-vscode` folder in VS Code, then press **F5** (or go to **Run → Start Debugging**).
+Press **F5** (or go to **Run → Start Debugging**) from any workspace folder.
 
 VS Code opens a second window labelled **[Extension Development Host]** with the extension loaded from your local source. Any change you make followed by `npm run compile` (or `npm run watch` for automatic recompilation) is reflected immediately after reloading the host window (**Ctrl+R** / **Cmd+R**).
+
+> **Note:** You can work from either the root `j2html-preview` folder or open just the `j2html-preview-vscode` subfolder—both work. The root folder includes a `.vscode/launch.json` configuration that automatically targets the extension subfolder.
 
 ### 4. Test on an example project
 
