@@ -7,7 +7,7 @@
       "request": "launch",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/j2html-preview-vscode",
-        "${workspaceFolder}/j2html-preview-annotation"
+        "C:/Users/robin/IdeaProjects/j2html-plugin-demo"
       ],
       "outFiles": [
         "${workspaceFolder}/j2html-preview-vscode/out/**/*.js"
