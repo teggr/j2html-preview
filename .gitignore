@@ -1,0 +1,7 @@
+# Maven build output
+target/
+
+# VS Code extension build output
+j2html-preview-vscode/out/
+j2html-preview-vscode/node_modules/
+j2html-preview-vscode/*.vsix
