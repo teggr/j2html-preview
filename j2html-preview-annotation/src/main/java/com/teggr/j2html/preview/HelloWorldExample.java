@@ -61,7 +61,8 @@ public class HelloWorldExample {
     public static DomContent render(Map<String, String> values) {
         return TagCreator.div(
             TagCreator.h1("Today, Tomorrow"),
-            TagCreator.p("This is the next genration")
+            TagCreator.p("This is the next genration"),
+            TagCreator.input().withValue("does this work")
         );
     }
     

@@ -4,6 +4,43 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 // ---------------------------------------------------------------------------
+// Preview tracking
+// ---------------------------------------------------------------------------
+
+/**
+ * Metadata for an active preview panel.
+ */
+interface ActivePreview {
+    panel: vscode.WebviewPanel;
+    document: vscode.TextDocument;
+    className: string;
+    methodName: string;
+    projectRoot: string;
+}
+
+/**
+ * Maps preview key (documentUri#methodName) to active preview metadata.
+ */
+const activePreviews = new Map<string, ActivePreview>();
+
+/**
+ * Maps preview key to pending debounce timer.
+ */
+const debounceTimers = new Map<string, NodeJS.Timeout>();
+
+/**
+ * Default debounce delay in milliseconds for auto-reload.
+ */
+const DEBOUNCE_DELAY_MS = 500;
+
+/**
+ * Generates a unique key for a preview panel.
+ */
+function getPreviewKey(documentUri: string, methodName: string): string {
+    return `${documentUri}#${methodName}`;
+}
+
+// ---------------------------------------------------------------------------
 // Activation
 // ---------------------------------------------------------------------------
 
@@ -23,6 +60,15 @@ export function activate(context: vscode.ExtensionContext): void {
             (args: PreviewCommandArgs) => runPreview(args),
         ),
     );
+
+    // Watch for Java file changes to auto-reload previews.
+    const fileWatcher = vscode.workspace.createFileSystemWatcher('**/*.java');
+    
+    fileWatcher.onDidChange((uri) => {
+        handleFileChange(uri);
+    });
+
+    context.subscriptions.push(fileWatcher);
 }
 
 export function deactivate(): void {
@@ -126,6 +172,41 @@ async function runPreview(args: PreviewCommandArgs): Promise<void> {
         { enableScripts: false },
     );
 
+    // Register this preview for auto-reload.
+    const previewKey = getPreviewKey(document.uri.toString(), methodName);
+    activePreviews.set(previewKey, {
+        panel,
+        document,
+        className,
+        methodName,
+        projectRoot,
+    });
+
+    // Clean up when the panel is disposed.
+    panel.onDidDispose(() => {
+        activePreviews.delete(previewKey);
+        const timer = debounceTimers.get(previewKey);
+        if (timer) {
+            clearTimeout(timer);
+            debounceTimers.delete(previewKey);
+        }
+    });
+
+    // Perform the initial preview refresh.
+    await refreshPreview(previewKey);
+}
+
+/**
+ * Refreshes the preview panel by recompiling and re-running the Java method.
+ */
+async function refreshPreview(previewKey: string): Promise<void> {
+    const preview = activePreviews.get(previewKey);
+    if (!preview) {
+        return;
+    }
+
+    const { panel, className, methodName, projectRoot } = preview;
+
     panel.webview.html = loadingHtml(methodName);
 
     try {
@@ -142,6 +223,33 @@ async function runPreview(args: PreviewCommandArgs): Promise<void> {
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         panel.webview.html = errorHtml(message);
+    }
+}
+
+/**
+ * Handles a file change event and triggers debounced refresh for affected previews.
+ */
+function handleFileChange(uri: vscode.Uri): void {
+    const uriString = uri.toString();
+
+    // Check which active previews are affected by this file change.
+    for (const [previewKey, preview] of activePreviews) {
+        // Refresh if the changed file matches the preview's document.
+        if (preview.document.uri.toString() === uriString) {
+            // Clear any existing debounce timer.
+            const existingTimer = debounceTimers.get(previewKey);
+            if (existingTimer) {
+                clearTimeout(existingTimer);
+            }
+
+            // Set a new debounce timer.
+            const timer = setTimeout(() => {
+                debounceTimers.delete(previewKey);
+                refreshPreview(previewKey);
+            }, DEBOUNCE_DELAY_MS);
+
+            debounceTimers.set(previewKey, timer);
+        }
     }
 }
 
