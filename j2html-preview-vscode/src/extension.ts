@@ -336,12 +336,26 @@ function runJavaMethod(
     methodName: string,
 ): Promise<string> {
     return new Promise((resolve, reject) => {
-        // On Windows, use shell: true to handle long classpaths properly
+        // Create a temporary argument file to avoid Windows command line length limits
+        const argFile = path.join(cwd, 'target', '.j2html-preview-args.txt');
+        
+        try {
+            // Write classpath and arguments to the file (one argument per line)
+            // On Windows, we must not quote the classpath when it contains semicolons
+            // Java argument files handle spaces in paths correctly without quotes
+            const argFileContent = `-cp\n${classpath}\ncom.teggr.j2html.preview.PreviewRunner\n${className}\n${methodName}`;
+            fs.writeFileSync(argFile, argFileContent, 'utf-8');
+        } catch (writeErr) {
+            reject(new Error(`Failed to write argument file: ${writeErr}`));
+            return;
+        }
+        
+        // On Windows, use shell: true to handle paths properly
         const useShell = process.platform === 'win32';
         
         const proc = cp.spawn(
             'java',
-            ['-cp', classpath, 'com.teggr.j2html.preview.PreviewRunner', className, methodName],
+            [`@${argFile}`],
             { cwd, shell: useShell },
         );
 
@@ -351,6 +365,15 @@ function runJavaMethod(
         proc.stderr.on('data', (data: Buffer) => (stderr += data.toString()));
 
         proc.on('close', (code) => {
+            // Clean up the temporary argument file
+            try {
+                if (fs.existsSync(argFile)) {
+                    fs.unlinkSync(argFile);
+                }
+            } catch (cleanupErr) {
+                // Ignore cleanup errors
+            }
+            
             if (code === 0) {
                 resolve(stdout.trim());
             } else {
@@ -359,6 +382,14 @@ function runJavaMethod(
         });
         
         proc.on('error', (err) => {
+            // Clean up the temporary argument file on error
+            try {
+                if (fs.existsSync(argFile)) {
+                    fs.unlinkSync(argFile);
+                }
+            } catch (cleanupErr) {
+                // Ignore cleanup errors
+            }
             reject(new Error(`Failed to spawn Java process: ${err.message}`));
         });
     });

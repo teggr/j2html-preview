@@ -2,7 +2,7 @@
   "name": "j2html-preview",
   "displayName": "j2html Preview",
   "description": "Preview j2html HTML output directly in VS Code by running methods annotated with @Preview",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "publisher": "teggr",
   "engines": {
     "vscode": "^1.85.0"
