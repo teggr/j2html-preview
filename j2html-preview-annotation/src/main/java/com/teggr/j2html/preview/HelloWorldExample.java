@@ -1,5 +1,8 @@
 package com.teggr.j2html.preview;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import j2html.TagCreator;
 import j2html.tags.DomContent;
 
@@ -49,6 +52,13 @@ public class HelloWorldExample {
 
     @Preview("A dom content")
     public DomContent h1WithParagraph() {
+
+        Map<String, String> values = new HashMap<>();
+
+        return render(values);
+    }
+
+    public static DomContent render(Map<String, String> values) {
         return TagCreator.div(
             TagCreator.h1("Today, Tomorrow"),
             TagCreator.p("This is the next genration")
