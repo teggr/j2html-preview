@@ -57,12 +57,12 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand(
             'j2html-preview.preview',
-            (args: PreviewCommandArgs) => runPreview(args),
+            (args: PreviewCommandArgs) => runPreview(context, args),
         ),
     );
 
-    // Watch for Java file changes to auto-reload previews.
-    const fileWatcher = vscode.workspace.createFileSystemWatcher('**/*.java');
+    // Watch for Java and CSS file changes to auto-reload previews.
+    const fileWatcher = vscode.workspace.createFileSystemWatcher('**/*.{java,css}');
     
     fileWatcher.onDidChange((uri) => {
         handleFileChange(uri);
@@ -153,7 +153,7 @@ class PreviewCodeLensProvider implements vscode.CodeLensProvider {
 // Preview execution
 // ---------------------------------------------------------------------------
 
-async function runPreview(args: PreviewCommandArgs): Promise<void> {
+async function runPreview(context: vscode.ExtensionContext, args: PreviewCommandArgs): Promise<void> {
     const { document, className, methodName } = args;
 
     const projectRoot = findMavenRoot(document.uri.fsPath);
@@ -169,7 +169,10 @@ async function runPreview(args: PreviewCommandArgs): Promise<void> {
         'j2htmlPreview',
         previewName,
         vscode.ViewColumn.Beside,
-        { enableScripts: false },
+        { 
+            enableScripts: false,
+            localResourceRoots: [vscode.Uri.file(projectRoot)]
+        },
     );
 
     // Register this preview for auto-reload.
@@ -207,7 +210,7 @@ async function refreshPreview(previewKey: string): Promise<void> {
 
     const { panel, className, methodName, projectRoot } = preview;
 
-    panel.webview.html = loadingHtml(methodName);
+    panel.webview.html = await loadingHtml(panel, projectRoot, methodName);
 
     try {
         // Compile test sources so the annotated method class is available.
@@ -219,10 +222,17 @@ async function refreshPreview(previewKey: string): Promise<void> {
         // Run the annotated method and capture its HTML output.
         const html = await runJavaMethod(projectRoot, classpath, className, methodName);
 
-        panel.webview.html = html || '<p>(method returned no output)</p>';
+        // Process the HTML and inject CSS
+        const processedHtml = await processHtmlWithCss(
+            panel,
+            projectRoot,
+            html || '<p>(method returned no output)</p>'
+        );
+
+        panel.webview.html = processedHtml;
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
-        panel.webview.html = errorHtml(message);
+        panel.webview.html = await errorHtml(panel, projectRoot, message);
     }
 }
 
@@ -251,6 +261,116 @@ function handleFileChange(uri: vscode.Uri): void {
             debounceTimers.set(previewKey, timer);
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// CSS helpers
+// ---------------------------------------------------------------------------
+
+interface CssConfiguration {
+    cssFiles: string[];
+    inlineStyles: string;
+}
+
+/**
+ * Reads CSS configuration from VS Code settings.
+ */
+function getCssConfiguration(): CssConfiguration {
+    const config = vscode.workspace.getConfiguration('j2html-preview');
+    return {
+        cssFiles: config.get<string[]>('cssFiles') || ['src/main/resources/static/styles.css'],
+        inlineStyles: config.get<string>('inlineStyles') || '',
+    };
+}
+
+/**
+ * Resolves CSS files from glob patterns, local paths, or URLs and converts them to webview URIs.
+ * Returns an array of <link> tag strings.
+ */
+async function resolveCssFiles(panel: vscode.WebviewPanel, projectRoot: string): Promise<string[]> {
+    const config = getCssConfiguration();
+    const cssLinks: string[] = [];
+
+    for (const pattern of config.cssFiles) {
+        // Check if this is an external URL
+        if (pattern.startsWith('http://') || pattern.startsWith('https://')) {
+            cssLinks.push(`<link rel="stylesheet" href="${pattern}">`);
+            continue;
+        }
+
+        const fullPath = path.join(projectRoot, pattern);
+        
+        // Check if this is a direct file path (not a glob)
+        if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
+            const cssUri = panel.webview.asWebviewUri(vscode.Uri.file(fullPath));
+            cssLinks.push(`<link rel="stylesheet" href="${cssUri}">`);
+        } else {
+            // It might be a glob pattern - use VS Code's file search
+            const files = await vscode.workspace.findFiles(
+                new vscode.RelativePattern(projectRoot, pattern),
+                '**/node_modules/**',
+                100
+            );
+            
+            for (const fileUri of files) {
+                const cssUri = panel.webview.asWebviewUri(fileUri);
+                cssLinks.push(`<link rel="stylesheet" href="${cssUri}">`);
+            }
+        }
+    }
+
+    return cssLinks;
+}
+
+/**
+ * Processes HTML content by injecting CSS links and inline styles.
+ * Detects whether HTML is a fragment or full document and handles accordingly.
+ */
+async function processHtmlWithCss(
+    panel: vscode.WebviewPanel,
+    projectRoot: string,
+    html: string
+): Promise<string> {
+    const cssLinks = await resolveCssFiles(panel, projectRoot);
+    const config = getCssConfiguration();
+    
+    // Build CSS injection content
+    const cssContent = [
+        ...cssLinks,
+        config.inlineStyles ? `<style>${config.inlineStyles}</style>` : '',
+    ].filter(Boolean).join('\n    ');
+
+    if (!cssContent) {
+        return html; // No CSS to inject
+    }
+
+    // Detect if this is a full HTML document or a fragment
+    const isFullDocument = /<html[>\s]/i.test(html) || /<head[>\s]/i.test(html);
+
+    if (!isFullDocument) {
+        // Fragment: wrap in a full HTML template with CSS
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    ${cssContent}
+</head>
+<body>
+    ${html}
+</body>
+</html>`;
+    }
+
+    // Full document: inject CSS into the <head> section
+    const headMatch = html.match(/<head[^>]*>/i);
+    if (headMatch) {
+        const headEndIndex = headMatch.index! + headMatch[0].length;
+        return html.slice(0, headEndIndex) + '\n    ' + cssContent + html.slice(headEndIndex);
+    }
+
+    // Fallback: try to inject before </head>
+    return html.replace(/(<\/head>)/i, `    ${cssContent}\n$1`);
 }
 
 // ---------------------------------------------------------------------------
@@ -399,20 +519,34 @@ function runJavaMethod(
 // WebView HTML helpers
 // ---------------------------------------------------------------------------
 
-function loadingHtml(methodName: string): string {
+async function loadingHtml(panel: vscode.WebviewPanel, projectRoot: string, methodName: string): Promise<string> {
+    const cssLinks = await resolveCssFiles(panel, projectRoot);
+    const cssContent = cssLinks.join('\n    ');
+    
     return /* html */ `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>j2html Preview</title></head>
+<head>
+    <meta charset="UTF-8">
+    <title>j2html Preview</title>
+    ${cssContent}
+</head>
 <body>
   <p>Building project and running <code>${escapeHtml(methodName)}()</code>&hellip;</p>
 </body>
 </html>`;
 }
 
-function errorHtml(message: string): string {
+async function errorHtml(panel: vscode.WebviewPanel, projectRoot: string, message: string): Promise<string> {
+    const cssLinks = await resolveCssFiles(panel, projectRoot);
+    const cssContent = cssLinks.join('\n    ');
+    
     return /* html */ `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>j2html Preview – Error</title></head>
+<head>
+    <meta charset="UTF-8">
+    <title>j2html Preview – Error</title>
+    ${cssContent}
+</head>
 <body>
   <h3>Preview failed</h3>
   <pre style="white-space:pre-wrap;word-break:break-all">${escapeHtml(message)}</pre>

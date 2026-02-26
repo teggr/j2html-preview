@@ -65,5 +65,71 @@ public class HelloWorldExample {
             TagCreator.input().withValue("does this work")
         );
     }
+
+    @Preview("Styled Fragment")
+    public String styledFragment() {
+        return """
+                <div class="card">
+                    <h2>Styled Card Component</h2>
+                    <p>This card uses CSS classes from styles.css instead of inline styles.</p>
+                    <button>Styled Button</button>
+                </div>
+                """;
+    }
+
+    @Preview("Full Document with CSS")
+    public String fullDocumentWithCss() {
+        return """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Full Document Test</title>
+                </head>
+                <body>
+                    <h1>Full Document Example</h1>
+                    <p>This is a full HTML document. The CSS should be injected into the head.</p>
+                    <div class="card">
+                        <h2>Card in Full Document</h2>
+                        <p>CSS classes work here too!</p>
+                    </div>
+                </body>
+                </html>
+                """;
+    }
+
+    @Preview("Bootstrap Example")
+    public String bootstrapExample() {
+        return """
+                <div class="container mt-4">
+                    <div class="row">
+                        <div class="col-md-8 offset-md-2">
+                            <div class="card shadow">
+                                <div class="card-header bg-primary text-white">
+                                    <h3 class="mb-0">Bootstrap Card</h3>
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="card-title">Using External CDN CSS</h5>
+                                    <p class="card-text">
+                                        This example demonstrates using Bootstrap CSS from a CDN.
+                                        Configure it in VS Code settings:
+                                    </p>
+                                    <pre class="bg-light p-3 rounded"><code>"j2html-preview.cssFiles": [
+  "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css",
+  "src/main/resources/static/styles.css"
+]</code></pre>
+                                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                        <button class="btn btn-primary" type="button">Primary Button</button>
+                                        <button class="btn btn-secondary" type="button">Secondary Button</button>
+                                    </div>
+                                </div>
+                                <div class="card-footer text-muted">
+                                    Mix local and external CSS sources!
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                """;
+    }
     
 }

@@ -2,7 +2,7 @@
   "name": "j2html-preview",
   "displayName": "j2html Preview",
   "description": "Preview j2html HTML output directly in VS Code by running methods annotated with @Preview",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "teggr",
   "engines": {
     "vscode": "^1.85.0"
@@ -26,7 +26,25 @@
         "command": "j2html-preview.preview",
         "title": "j2html: Open Preview"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "j2html Preview",
+      "properties": {
+        "j2html-preview.cssFiles": {
+          "type": "array",
+          "default": ["src/main/resources/static/styles.css"],
+          "description": "List of CSS sources to include in preview. Supports: local file paths, glob patterns (relative to Maven project root), and external URLs (e.g., https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "j2html-preview.inlineStyles": {
+          "type": "string",
+          "default": "",
+          "description": "Additional CSS to inject inline into all previews (optional)"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
