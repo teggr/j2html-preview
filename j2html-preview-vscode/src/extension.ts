@@ -164,6 +164,15 @@ async function runPreview(context: vscode.ExtensionContext, args: PreviewCommand
         return;
     }
 
+    // Reuse the existing preview panel if one is already open for this method.
+    const previewKey = getPreviewKey(document.uri.toString(), methodName);
+    const existing = activePreviews.get(previewKey);
+    if (existing) {
+        existing.panel.reveal(vscode.ViewColumn.Beside);
+        await refreshPreview(previewKey);
+        return;
+    }
+
     const previewName = `${methodName} – j2html Preview`;
     const panel = vscode.window.createWebviewPanel(
         'j2htmlPreview',
@@ -176,7 +185,6 @@ async function runPreview(context: vscode.ExtensionContext, args: PreviewCommand
     );
 
     // Register this preview for auto-reload.
-    const previewKey = getPreviewKey(document.uri.toString(), methodName);
     activePreviews.set(previewKey, {
         panel,
         document,
