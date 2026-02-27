@@ -69,6 +69,13 @@ export function activate(context: vscode.ExtensionContext): void {
     });
 
     context.subscriptions.push(fileWatcher);
+
+    // Close preview panels when their source editor is closed.
+    context.subscriptions.push(
+        vscode.window.onDidChangeVisibleTextEditors((editors) => {
+            handleVisibleEditorsChange(editors);
+        }),
+    );
 }
 
 export function deactivate(): void {
@@ -268,6 +275,31 @@ function handleFileChange(uri: vscode.Uri): void {
 
             debounceTimers.set(previewKey, timer);
         }
+    }
+}
+
+/**
+ * Closes preview panels when their source document is no longer visible in any editor.
+ */
+function handleVisibleEditorsChange(editors: readonly vscode.TextEditor[]): void {
+    // Build a set of currently visible document URIs for fast lookup.
+    const visibleDocumentUris = new Set(
+        editors.map((editor) => editor.document.uri.toString()),
+    );
+
+    // Collect previews to close (avoid modifying Map during iteration).
+    const previewsToClose: vscode.WebviewPanel[] = [];
+
+    for (const [previewKey, preview] of activePreviews) {
+        // Check if the preview's document is still visible in any editor.
+        if (!visibleDocumentUris.has(preview.document.uri.toString())) {
+            previewsToClose.push(preview.panel);
+        }
+    }
+
+    // Dispose the panels. The onDidDispose handler will clean up the Maps.
+    for (const panel of previewsToClose) {
+        panel.dispose();
     }
 }
 
