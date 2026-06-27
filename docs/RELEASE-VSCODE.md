@@ -63,5 +63,5 @@ npx vsce publish
 
 ## Notes
 
-- Publisher identifiers cannot contain dots, so dev-rebelstack is valid while dev.rebelstack is not.
+- Publisher identifiers cannot contain dots, so dev-rebelstack is valid while dev.rebelcraft is not.
 - If publish fails after version bump, fix the issue and publish the same version if it has not been accepted by Marketplace.

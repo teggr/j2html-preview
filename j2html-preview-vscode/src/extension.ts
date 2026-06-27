@@ -915,7 +915,7 @@ function runJavaMethod(
             // Write classpath and arguments to the file (one argument per line)
             // On Windows, we must not quote the classpath when it contains semicolons
             // Java argument files handle spaces in paths correctly without quotes
-            const argFileContent = `-cp\n${classpath}\ndev.rebelstack.j2html.preview.PreviewRunner\n${className}\n${methodName}`;
+            const argFileContent = `-cp\n${classpath}\ndev.rebelcraft.j2html.preview.PreviewRunner\n${className}\n${methodName}`;
             fs.writeFileSync(argFile, argFileContent, 'utf-8');
         } catch (writeErr) {
             reject(new Error(`Failed to write argument file: ${writeErr}`));

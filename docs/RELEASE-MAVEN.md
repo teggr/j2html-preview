@@ -3,7 +3,7 @@
 This document follows the same local release pattern used in j2html-extensions.
 
 Artifact:
-- dev.rebelstack:j2html-preview
+- dev.rebelcraft:j2html-preview
 
 ## Prerequisites
 

@@ -1,4 +1,4 @@
-package dev.rebelstack.j2html.preview;
+package dev.rebelcraft.j2html.preview;
 
 import java.lang.reflect.Method;
 
@@ -8,7 +8,7 @@ import java.lang.reflect.Method;
  *
  * <p>Usage:
  * <pre>
- *   java -cp &lt;classpath&gt; dev.rebelstack.j2html.preview.PreviewRunner &lt;className&gt; &lt;methodName&gt;
+ *   java -cp &lt;classpath&gt; dev.rebelcraft.j2html.preview.PreviewRunner &lt;className&gt; &lt;methodName&gt;
  * </pre>
  *
  * <p>The method must be public, take no arguments, and return either a plain

@@ -1,4 +1,4 @@
-package dev.rebelstack.j2html.preview;
+package dev.rebelcraft.j2html.preview;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

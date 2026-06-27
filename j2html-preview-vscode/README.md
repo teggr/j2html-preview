@@ -62,7 +62,7 @@ Inside the Extension Development Host window, open a Maven project that depends 
 ```xml
 <!-- in your project's pom.xml -->
 <dependency>
-    <groupId>dev.rebelstack</groupId>
+    <groupId>dev.rebelcraft</groupId>
     <artifactId>j2html-preview</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 </dependency>
@@ -71,7 +71,7 @@ Inside the Extension Development Host window, open a Maven project that depends 
 Then annotate a no-arg method with `@Preview`:
 
 ```java
-import dev.rebelstack.j2html.preview.Preview;
+import dev.rebelcraft.j2html.preview.Preview;
 
 public class MyPreviews {
 
@@ -105,7 +105,7 @@ After saving a change to `src/extension.ts`, reload the Extension Development Ho
 1. **CodeLens** — `PreviewCodeLensProvider` asks VS Code's Java symbol provider for classes and methods, then matches `@Preview` annotations from source text onto those symbols before registering a `▶ Preview` lens for each match.
 2. **Build** — clicking the lens compiles using the configured strategy (`j2html-preview.buildStrategy`): Java extension first or Maven first, with fallback to the other path when needed. The compile step is cached until a Java or `pom.xml` change invalidates it.
 3. **Classpath** — classpath resolution also follows `j2html-preview.buildStrategy`, with fallback between Java extension classpath and Maven dependency classpath. The resolved classpath is cached and recomputed when `pom.xml` changes.
-4. **Run** — `java -cp <classpath> dev.rebelstack.j2html.preview.PreviewRunner <className> <methodName>` is executed and its stdout (the rendered HTML) is displayed in the WebView panel.
+4. **Run** — `java -cp <classpath> dev.rebelcraft.j2html.preview.PreviewRunner <className> <methodName>` is executed and its stdout (the rendered HTML) is displayed in the WebView panel.
 5. **Refresh** — when CSS changes, the extension reuses the last rendered HTML and only reinjects styles into the WebView instead of rerunning the preview method.
 
 ## Release and installation

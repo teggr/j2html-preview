@@ -1,4 +1,4 @@
-package dev.rebelstack.j2html.preview;
+package dev.rebelcraft.j2html.preview;
 
 import org.junit.jupiter.api.Test;
 
