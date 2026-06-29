@@ -59,6 +59,13 @@ class PreviewRunnerTest {
         }
     }
 
+    static class HiddenPreview {
+        @Preview
+        private String hidden() {
+            return "<p>hidden</p>";
+        }
+    }
+
     // ---------------------------------------------------------------------------
     // Tests
     // ---------------------------------------------------------------------------
@@ -69,6 +76,22 @@ class PreviewRunnerTest {
                 StringPreview.class.getName(), "hello"
         });
         assertEquals("<h1>Hello, World!</h1>", output);
+    }
+
+    @Test
+    void normalizesParenthesizedMethodNames() throws Exception {
+        String output = PreviewRunner.run(new String[]{
+                StringPreview.class.getName(), "hello()"
+        });
+        assertEquals("<h1>Hello, World!</h1>", output);
+    }
+
+    @Test
+    void runsPrivateMethodOnPackagePrivateClass() throws Exception {
+        String output = PreviewRunner.run(new String[]{
+                HiddenPreview.class.getName(), "hidden"
+        });
+        assertEquals("<p>hidden</p>", output);
     }
 
     @Test

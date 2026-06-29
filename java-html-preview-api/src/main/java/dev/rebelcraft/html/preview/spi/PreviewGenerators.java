@@ -7,6 +7,7 @@ import java.util.ServiceLoader;
 import java.util.stream.Stream;
 
 import dev.rebelcraft.html.preview.Preview;
+import dev.rebelcraft.html.preview.PreviewRunner;
 
 /**
  * Discovers and selects {@link PreviewGenerator} implementations.
@@ -73,7 +74,7 @@ public final class PreviewGenerators {
 
         @Override
         public String generate(Class<?> clazz, Method method, Preview preview) throws Exception {
-            Object instance = clazz.getDeclaredConstructor().newInstance();
+            Object instance = PreviewRunner.newAccessibleInstance(clazz);
             Object result = method.invoke(instance);
             return result == null ? "" : (String) result;
         }

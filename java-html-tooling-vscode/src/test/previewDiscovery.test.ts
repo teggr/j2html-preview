@@ -153,3 +153,24 @@ public class ExampleTestClassTest {
         },
     ]);
 });
+
+test('regex fallback supports non-public classes with modifiers', () => {
+    const documentText = `package org.example;
+
+final class PackagePrivatePreview {
+
+    @Preview("pkg-private")
+    protected String sample() {
+        return "<p>ok</p>";
+    }
+}`;
+
+    assert.deepEqual(discoverPreviewTargetsWithRegexFallback(documentText), [
+        {
+            annotationLine: 4,
+            className: 'org.example.PackagePrivatePreview',
+            methodName: 'sample',
+            previewLabel: 'pkg-private',
+        },
+    ]);
+});

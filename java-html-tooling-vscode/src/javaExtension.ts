@@ -1,9 +1,17 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { buildJavaGetClasspathsWorkspaceArgs } from './javaClasspathCommand';
 
 interface JavaProjectClasspathResult {
     classpaths?: unknown;
     modulepaths?: unknown;
+}
+
+interface JavaExtensionApi {
+    getClasspaths?: (
+        uri: string,
+        options: { scope: 'runtime' | 'test' },
+    ) => Promise<JavaProjectClasspathResult | undefined>;
 }
 
 function toStringArray(value: unknown): string[] {
@@ -72,48 +80,47 @@ async function requestJavaProjectClasspaths(
     documentUri: vscode.Uri,
 ): Promise<JavaProjectClasspathResult> {
     const uri = documentUri.toString();
+    const extension = vscode.extensions.getExtension('redhat.java');
+    const api = extension?.exports as JavaExtensionApi | undefined;
 
     try {
-        // The command bridge expects commandName followed by positional args.
-        // Passing a single array can reach Java as java.util.ArrayList and fail casts.
+        if (typeof api?.getClasspaths === 'function') {
+            const result = await api.getClasspaths(uri, { scope: 'test' });
+
+            if (result) {
+                return result;
+            }
+        }
+    } catch {
+        // Fall through to workspace command API.
+    }
+
+    try {
+        const [command, javaUri, scope] = buildJavaGetClasspathsWorkspaceArgs(uri);
         const result = await vscode.commands.executeCommand<JavaProjectClasspathResult>(
             'java.execute.workspaceCommand',
-            'java.project.getClasspaths',
-            uri,
-            { scope: 'test' },
+            command,
+            javaUri,
+            scope,
         );
 
         if (result) {
             return result;
         }
     } catch {
-        // Fall through to alternate signatures below.
+        // Fall through to object-options command shape for older Java extension versions.
     }
 
-    try {
-        const result = await vscode.commands.executeCommand<JavaProjectClasspathResult>(
-            'java.execute.workspaceCommand',
-            'java.project.getClasspaths',
-            uri,
-            'test',
-        );
-
-        if (result) {
-            return result;
-        }
-    } catch {
-        // Fall through to legacy array signature.
-    }
-
-    const legacyResult = await vscode.commands.executeCommand<JavaProjectClasspathResult>(
+    const fallbackResult = await vscode.commands.executeCommand<JavaProjectClasspathResult>(
         'java.execute.workspaceCommand',
         'java.project.getClasspaths',
-        [uri, { scope: 'test' }],
+        uri,
+        { scope: 'test' },
     );
 
-    if (!legacyResult) {
+    if (!fallbackResult) {
         throw new Error('Java extension did not return classpath information.');
     }
 
-    return legacyResult;
+    return fallbackResult;
 }

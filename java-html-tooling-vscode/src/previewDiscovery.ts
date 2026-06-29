@@ -161,7 +161,9 @@ function escapeRegExp(value: string): string {
 export function discoverPreviewTargetsWithRegexFallback(documentText: string): PreviewTarget[] {
     const lines = documentText.split(/\r?\n/);
     const packageMatch = documentText.match(/^package\s+([\w.]+)\s*;/m);
-    const classMatch = documentText.match(/^(?:public\s+)?(?:class|interface)\s+(\w+)/m);
+    const classMatch = documentText.match(
+        /^\s*(?:(?:public|protected|private|abstract|final|sealed|non-sealed|static)\s+)*(?:class|interface)\s+(\w+)/m,
+    );
     if (!classMatch) {
         return [];
     }

@@ -1,6 +1,7 @@
 package dev.rebelcraft.html.preview;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Constructor;
 
 import dev.rebelcraft.html.preview.spi.PreviewGenerators;
 
@@ -46,10 +47,19 @@ public class PreviewRunner {
         }
 
         String className = args[0];
-        String methodName = args[1];
+        String methodName = normalizeMethodName(args[1]);
 
         Class<?> clazz = Class.forName(className);
-        Method method = clazz.getMethod(methodName);
+        Method method;
+        try {
+            method = clazz.getDeclaredMethod(methodName);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException(
+                    "Could not find preview method '" + methodName + "' on class '"
+                            + className + "'. Preview methods may be public, protected, package-private, or private, but they must be no-argument instance methods annotated with @Preview.",
+                    e);
+        }
+        method.setAccessible(true);
 
         if (!method.isAnnotationPresent(Preview.class)) {
             throw new IllegalArgumentException(
@@ -59,5 +69,20 @@ public class PreviewRunner {
 
         Preview preview = method.getAnnotation(Preview.class);
         return PreviewGenerators.generate(clazz, method, preview);
+    }
+
+    private static String normalizeMethodName(String methodName) {
+        int parenIndex = methodName.indexOf('(');
+        if (parenIndex < 0) {
+            return methodName;
+        }
+
+        return methodName.substring(0, parenIndex).trim();
+    }
+
+    public static <T> T newAccessibleInstance(Class<T> clazz) throws Exception {
+        Constructor<T> constructor = clazz.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        return constructor.newInstance();
     }
 }

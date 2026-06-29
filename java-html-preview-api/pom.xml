@@ -6,7 +6,7 @@
 
     <groupId>dev.rebelcraft</groupId>
     <artifactId>java-html-preview-api</artifactId>
-    <version>0.0.3-SNAPSHOT</version>
+    <version>0.0.5-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>java-html-preview-api</name>
